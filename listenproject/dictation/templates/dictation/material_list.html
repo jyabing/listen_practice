@@ -1,0 +1,53 @@
+<h1>📚 听写材料列表</h1>
+
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>内容</th>
+            <th>分类</th>
+            <th>音频</th>
+            <th>操作</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for material in page_obj %}
+        <tr>
+            <td>{{ material.id }}</td>
+            <td>{{ material.content }}</td>
+            <td>
+                {% for cat in material.categories.all %}
+                    {{ cat.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>
+                {% if material.audio %}
+                    ✅
+                {% else %}
+                    ❌
+                {% endif %}
+            </td>
+            <td>
+                <a href="{% url 'play_material' material.id %}">🔊 试听</a> |
+                <a href="{% url 'edit_material' material.id %}">✏️ 编辑</a> |
+                <a href="{% url 'delete_material' material.id %}">❌ 删除</a>
+
+                <!-- 可扩展编辑/删除 -->
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- 分页 -->
+<div>
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}">上一页</a>
+    {% endif %}
+
+    第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">下一页</a>
+    {% endif %}
+</div>

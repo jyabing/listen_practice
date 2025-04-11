@@ -1,0 +1,74 @@
+<h1>🎤 口述验收页面</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>用户录音</th>
+                <th>识别文本</th>          <!-- 新增 -->
+                <th>题目内容</th>
+                <th>系统判定</th>          <!-- 新增 -->
+                <th>最终结果</th>          <!-- 保留人工打分 -->
+            </tr>
+        </thead>
+        <tbody id="review-body"></tbody>
+    </table>
+
+    <button type="submit">提交评分</button>
+</form>
+
+<script>
+    /* 本地存的是 practice_recordings（口述） */
+    const recs = JSON.parse(localStorage.getItem('practice_recordings') || '[]');
+    
+    async function fetchMaterial(mid){
+      const res = await fetch(`/api/material/${mid}/`);
+      return await res.json();
+    }
+    
+    async function buildReviewTable(){
+      const tbody = document.getElementById('review-body');
+    
+      for(const r of recs){
+        const m   = await fetchMaterial(r.material_id);
+        const row = document.createElement('tr');
+    
+        /* ① 用户录音播放 */
+        const audioTd = document.createElement('td');
+        audioTd.innerHTML = r.audio_data
+           ? `<audio controls src="${r.audio_data}"></audio>`
+           : '（无）';
+        row.appendChild(audioTd);
+    
+        /* ② 识别文本（前端识别结果） */
+        const textTd  = document.createElement('td');
+        textTd.textContent = r.recognized_text || '（未识别）';
+        /* 也把识别文本作为隐藏域提交，方便后端保存 */
+        textTd.innerHTML += `<input type="hidden" name="input_${m.id}" value="${r.recognized_text || ''}">`;
+        row.appendChild(textTd);
+    
+        /* ③ 题目内容 */
+        const qTd = document.createElement('td');
+        qTd.textContent = m.question_text || m.content;
+        row.appendChild(qTd);
+    
+        /* ④ 系统自动判分（true / false / null） */
+        const sysTd = document.createElement('td');
+        const auto = r.auto_judge;
+        sysTd.textContent = (auto===true) ? '✅ 正确' :
+                            (auto===false)? '❌ 错误' : '—';
+        row.appendChild(sysTd);
+    
+        /* ⑤ 用户最终打分 */
+        const markTd = document.createElement('td');
+        markTd.innerHTML = `
+           <label><input type="radio" name="result_${m.id}" value="correct">✔</label>
+           <label><input type="radio" name="result_${m.id}" value="wrong">✘</label>`;
+        row.appendChild(markTd);
+    
+        tbody.appendChild(row);
+      }
+    }
+    buildReviewTable();
+    </script>

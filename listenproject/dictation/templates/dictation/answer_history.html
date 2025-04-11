@@ -1,0 +1,71 @@
+<h1>📊 答题记录</h1>
+
+<form method="get" style="margin-bottom: 15px;">
+    <label>分类：
+        <select name="category">
+            <option value="">全部</option>
+            {% for cat in categories %}
+                <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == selected_category %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+        </select>
+    </label>
+
+    <label>起始日期：
+        <input type="date" name="start_date" value="{{ start_date }}">
+    </label>
+
+    <label>结束日期：
+        <input type="date" name="end_date" value="{{ end_date }}">
+    </label>
+
+    <button type="submit">🔍 筛选</button>
+    <a href="{% url 'answer_record_list' %}">🔄 清除筛选</a>
+</form>
+
+<table border="1" cellpadding="5" cellspacing="0">
+    <thead>
+        <tr>
+            <th>听写内容</th>
+            <th>用户输入</th>
+            <th>正确？</th>
+            <th>时间</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in page_obj %}
+        <tr>
+            <td>{{ record.material.content }}</td>
+            <td>{{ record.user_input|default:"（空）" }}</td>
+            <td style="text-align: center;">
+                {% if record.is_correct %}
+                    ✅
+                {% elif record.is_correct == False %}
+                    ❌
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+            <td>{{ record.created_at|date:"Y-m-d H:i" }}</td>
+            <td>{{ record.session.mode }} / {{ record.session.interval }} 秒</td>
+            <td>{{ record.session.created_at|date:"Y-m-d H:i" }}</td>
+            <td>
+                <a href="{% url 'session_detail' record.session.id %}">查看本轮</a>
+            </td>
+            
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- 分页 -->
+<div style="margin-top:10px;">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}&category={{ selected_category }}&start_date={{ start_date }}&end_date={{ end_date }}">上一页</a>
+    {% endif %}
+
+    第 {{ page_obj.number }} 页，共 {{ page_obj.paginator.num_pages }} 页
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}&category={{ selected_category }}&start_date={{ start_date }}&end_date={{ end_date }}">下一页</a>
+    {% endif %}
+</div>

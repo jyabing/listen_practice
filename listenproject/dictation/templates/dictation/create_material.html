@@ -1,0 +1,57 @@
+<h1>输入听写材料</h1>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <fieldset>
+        <legend>听写材料</legend>
+        {{ form.as_p }}
+    </fieldset>
+
+    <fieldset>
+        <legend>问题（你可以添加多个）</legend>
+
+        <!-- 管理用隐藏字段 -->
+        {{ formset.management_form }}
+
+        <div id="formset-area">
+            {% for subform in formset %}
+                <div class="question-form" style="margin-bottom:10px; border:1px solid #ccc; padding:10px;">
+                    {{ subform.as_p }}
+                </div>
+            {% endfor %}
+        </div>
+
+        <button type="button" onclick="addForm()">➕ 添加一个问题</button>
+    </fieldset>
+
+    <br>
+    <button type="submit">提交</button>
+</form>
+
+<!-- 隐藏的空白模板：用于动态复制 -->
+<div id="empty-form-template" style="display:none;">
+    <div class="question-form" style="margin-bottom:10px; border:1px solid #ccc; padding:10px;">
+        <p><label for="id_question_set-__prefix__-question_text">问题内容:</label> 
+        <input type="text" name="question_set-__prefix__-question_text" required id="id_question_set-__prefix__-question_text"></p>
+
+        <p><label for="id_question_set-__prefix__-question_audio">问题音频:</label> 
+        <input type="file" name="question_set-__prefix__-question_audio" id="id_question_set-__prefix__-question_audio"></p>
+    </div>
+</div>
+
+<script>
+    // 保存初始空表单结构（你可以在 Django 模板中动态替换）
+    const totalForms = document.getElementById('id_question_set-TOTAL_FORMS');
+    let formIdx = parseInt(totalForms.value);
+
+    const emptyFormTemplate = document.getElementById('empty-form-template').innerHTML;
+
+    function addForm() {
+        const newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formIdx);
+        const container = document.getElementById('formset-area');
+        container.insertAdjacentHTML('beforeend', newFormHtml);
+        formIdx += 1;
+        totalForms.value = formIdx;
+    }
+</script>

@@ -1,0 +1,99 @@
+<h1>✍️ 手写记录练习</h1>
+
+<p>请在纸上写下你听到的内容。将自动播放所有材料。</p>
+
+<p id="counter">准备中...</p>
+
+<div id="practice-area">
+    <p id="timer" style="font-size: 1.2em; color: green;"></p>
+
+    <div id="material-block">
+        <p><strong id="material-content">准备中...</strong></p>
+        <audio id="audio-player" controls style="display: none;"></audio>
+    </div>
+</div>
+
+<script>
+const materials = {{ materials|safe }};
+shuffle(materials);
+
+let currentIndex = 0;
+
+const contentEl = document.getElementById('material-content');
+const audioEl = document.getElementById('audio-player');
+const timerEl = document.getElementById('timer');
+
+function playNext() {
+    if (currentIndex >= materials.length) {
+        if (confirm("听写完成，是否查看结果？")) {
+            localStorage.setItem('practice_answers', JSON.stringify(
+                materials.map(m => ({
+                    material_id: m.id,
+                    material_content: m.content,
+                    user_input: ""  // B 模式没有输入，留空
+                }))
+            ));
+            window.location.href = "{% url 'review_page' %}";
+        } else {
+            currentIndex = 0;
+            shuffle(materials);
+            playNext();
+        }
+        return;
+    }
+
+    const material = materials[currentIndex];
+    contentEl.textContent = "播放中...";
+    audioEl.style.display = 'none';
+
+    let duration = 3;
+
+    function startNextAfter(ms) {
+        setTimeout(() => {
+            currentIndex++;
+            playNext();
+        }, ms);
+    }
+
+    if (material.audio) {
+        audioEl.src = material.audio;
+        audioEl.style.display = 'block';
+        audioEl.onloadedmetadata = () => {
+            duration = audioEl.duration;
+            audioEl.play();
+            startCountdown(duration);
+            startNextAfter(duration * 2000);
+        };
+    } else {
+        contentEl.textContent = material.content;
+        const utterance = new SpeechSynthesisUtterance(material.content);
+        utterance.lang = 'ja-JP';
+        speechSynthesis.speak(utterance);
+
+        duration = Math.max(material.content.length * 0.2, 3);
+        startCountdown(duration);
+        startNextAfter(duration * 2000);
+    }
+}
+
+function startCountdown(duration) {
+    let remaining = Math.round(duration);
+    timerEl.textContent = `倒计时：${remaining} 秒`;
+    const countdown = setInterval(() => {
+        remaining--;
+        timerEl.textContent = `倒计时：${remaining} 秒`;
+        if (remaining <= 0) clearInterval(countdown);
+    }, 1000);
+}
+
+function shuffle(array) {
+    let currentIndex = array.length, randomIndex;
+    while (currentIndex !== 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+    }
+}
+
+playNext();
+</script>

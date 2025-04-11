@@ -1,0 +1,44 @@
+<h1>🎧 听写练习 App 首页</h1>
+
+<p><a href="{% url 'create_material' %}">➕ 输入听写材料</a></p>
+<p><a href="{% url 'practice_setting' %}">▶️ 开始练习</a></p>
+<p><a href="{% url 'review_page' %}">📄 验收页面（仅测试）</a></p>
+<p><a href="{% url 'material_list' %}">📚 查看所有听写材料</a></p>
+<p><a href="{% url 'answer_record_list' %}">📊 查看答题记录</a></p>
+<p><a href="{% url 'review_wrong_list' %}">❌ 查看错题记录</a></p>
+
+{% if user.is_authenticated %}
+  👋 欢迎 {{ user.username }}
+  <form method="post" action="{% url 'logout' %}" style="display: inline;">
+    {% csrf_token %}
+    <button type="submit">登出</button>
+  </form>
+{% else %}
+  <a href="{% url 'login' %}">登录</a> | <a href="{% url 'signup' %}">注册</a>
+{% endif %}
+
+<h2>🛠 工具</h2>
+<button onclick="checkMic()">🎤 检查麦克风</button>
+<p id="mic-status" style="margin-top: 10px; color: green;"></p>
+<script>
+  function checkMic() {
+      const statusEl = document.getElementById('mic-status');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          statusEl.textContent = "❌ 当前浏览器不支持麦克风功能。请使用 Chrome、Edge 或其他现代浏览器。";
+          statusEl.style.color = 'red';
+          return;
+      }
+  
+      navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+              statusEl.textContent = "✅ 麦克风可用！可以使用语音录入功能。";
+              statusEl.style.color = 'green';
+              stream.getTracks().forEach(track => track.stop());  // 关闭流
+          })
+          .catch(error => {
+              statusEl.textContent = "⚠️ 检测失败，请确保浏览器已授权麦克风权限。";
+              statusEl.style.color = 'orange';
+              console.warn("麦克风检测失败：", error);
+          });
+  }
+  </script>

@@ -1,0 +1,51 @@
+<h1>📋 练习详情：#{{ session.id }}</h1>
+
+<p>
+    模式：{{ session.get_mode_display }} |
+    播放间隔：{{ session.interval }} 秒 |
+    时间：{{ session.created_at|date:"Y-m-d H:i" }} <br>
+    总题数：{{ records|length }} | 正确数：{{ correct_rate }}%
+</p>
+
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>顺序</th>
+            <th>听写内容</th>
+            <th>用户输入</th>
+            <th>是否正确</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ record.material.content }}</td>
+            <td>{{ record.user_input|default:"（空）" }}</td>
+            <td style="text-align: center;">
+                {% if record.is_correct %}
+                    ✅
+                {% elif record.is_correct == False %}
+                    ❌
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<form method="post" action="{% url 'retry_session' session.id %}">
+    {% csrf_token %}
+    <button type="submit">🔁 再做一次本轮练习</button>
+</form>
+
+<p><a href="{% url 'answer_record_list' %}">← 返回答题记录</a></p>
+<form method="post" action="{% url 'retry_session' session.id %}" style="margin-top: 20px;">
+    {% csrf_token %}
+    <label>
+        <input type="checkbox" name="shuffle" checked>
+        打乱播放顺序
+    </label>
+    <button type="submit">🔁 再做一次本轮练习</button>
+</form>

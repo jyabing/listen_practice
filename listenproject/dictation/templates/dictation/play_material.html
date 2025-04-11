@@ -1,0 +1,32 @@
+<h1>听写材料播放</h1>
+
+<p><strong>内容：</strong> {{ material.content }}</p>
+
+{% if material.audio %}
+    <audio controls>
+        <source src="{{ material.audio.url }}">
+        浏览器不支持音频播放
+    </audio>
+{% else %}
+    <button onclick="speakText('{{ material.content }}')">🔊 系统朗读</button>
+{% endif %}
+
+{% for question in material.questions.all %}
+    <p>问题：{{ question.question_text }}</p>
+
+    {% if question.question_audio %}
+        <audio controls>
+            <source src="{{ question.question_audio.url }}">
+        </audio>
+    {% else %}
+        <button onclick="speakText('{{ question.question_text }}')">🔊 系统朗读</button>
+    {% endif %}
+{% endfor %}
+
+<script>
+function speakText(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';  // 可改为 'en-US', 'zh-CN' 等
+    window.speechSynthesis.speak(utterance);
+}
+</script>

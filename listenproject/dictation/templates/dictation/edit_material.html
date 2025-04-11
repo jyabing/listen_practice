@@ -1,0 +1,14 @@
+<h1>✏️ 编辑听写材料：{{ material.content }}</h1>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    {{ formset.management_form }}
+    {% for subform in formset %}
+        <div style="border:1px solid #ccc; padding:10px; margin:10px 0;">
+            {{ subform.as_p }}
+        </div>
+    {% endfor %}
+    <button type="submit">保存修改</button>
+    <a href="{% url 'material_list' %}">取消</a>
+</form>

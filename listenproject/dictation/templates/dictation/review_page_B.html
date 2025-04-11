@@ -1,0 +1,21 @@
+<h1>✍️ 手写记录验收</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <table border="1" cellpadding="5">
+        <tr>
+            <th>题目内容</th>
+            <th>标记结果</th>
+        </tr>
+        {% for rec in records %}
+        <tr>
+            <td>{{ rec.material.content }}</td>
+            <td>
+                <label><input type="radio" name="result_{{ rec.id }}" value="correct">✔ 正确</label>
+                <label><input type="radio" name="result_{{ rec.id }}" value="wrong">✘ 错误</label>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    <button type="submit">提交评分</button>
+</form>

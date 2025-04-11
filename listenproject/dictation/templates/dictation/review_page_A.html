@@ -1,0 +1,36 @@
+<h1>⌨️ 键盘输入验收</h1>
+
+<form method="post">
+    {% csrf_token %}
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>题目内容</th>
+                <th>你的输入</th>
+                <th>标记</th>
+            </tr>
+        </thead>
+        <tbody id="review-body"></tbody>
+    </table>
+
+    <button type="submit">提交评分</button>
+</form>
+
+<script>
+const answers = JSON.parse(localStorage.getItem('practice_answers') || '[]');
+const tbody = document.getElementById('review-body');
+
+answers.forEach(ans => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td>${ans.material_content}</td>
+        <td>${ans.user_input || "<i>（空）</i>"}</td>
+        <td>
+            <input type="hidden" name="input_${ans.material_id}" value="${ans.user_input}">
+            <label><input type="radio" name="result_${ans.material_id}" value="correct">✔ 正确</label>
+            <label><input type="radio" name="result_${ans.material_id}" value="wrong">✘ 错误</label>
+        </td>
+    `;
+    tbody.appendChild(row);
+});
+</script>

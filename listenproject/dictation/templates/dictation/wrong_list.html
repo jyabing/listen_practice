@@ -1,0 +1,28 @@
+<h1>❌ 错题记录</h1>
+
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>内容</th>
+            <th>分类</th>
+            <th>错误次数</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for material in materials %}
+        <tr>
+            <td>{{ material.content }}</td>
+            <td>
+                {% for cat in material.categories.all %}
+                    {{ cat.name }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </td>
+            <td>{{ material.wrong_count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<form method="post" action="{% url 'retry_wrong' %}">
+    {% csrf_token %}
+    <button type="submit">🔁 开始错题再练（默认模式 A）</button>
+</form>

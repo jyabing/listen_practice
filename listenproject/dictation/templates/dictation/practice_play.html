@@ -1,0 +1,88 @@
+<h1>听写练习开始</h1>
+
+<div id="practice-area">
+    <p id="timer" style="font-size: 1.2em; color: green;"></p>
+
+    <div id="material-block">
+        <p><strong id="material-content">准备中...</strong></p>
+
+        <audio id="audio-player" controls style="display: none;"></audio>
+
+        <input type="text" id="answer-input" placeholder="请输入答案" />
+    </div>
+</div>
+
+<form id="result-form" method="post" action="#">
+    {% csrf_token %}
+</form>
+
+<script>
+const materials = {{ materials|safe }};
+const interval = {{ interval }} * 1000; // 转换为毫秒
+let currentIndex = 0;
+let answers = [];
+
+const contentEl = document.getElementById('material-content');
+const audioEl = document.getElementById('audio-player');
+const inputEl = document.getElementById('answer-input');
+const timerEl = document.getElementById('timer');
+
+function playNext() {
+    if (currentIndex >= materials.length) {
+        finishPractice();
+        return;
+    }
+
+    const material = materials[currentIndex];
+
+    // 清空输入框
+    inputEl.value = '';
+    inputEl.focus();
+
+    // 显示内容（防止页面空白）
+    contentEl.textContent = "播放中...";
+    audioEl.style.display = 'none';
+
+    // 播放音频或朗读文字
+    if (material.audio) {
+        audioEl.src = material.audio;
+        audioEl.style.display = 'block';
+        audioEl.play();
+    } else {
+        contentEl.textContent = material.content;
+        const utterance = new SpeechSynthesisUtterance(material.content);
+        utterance.lang = 'ja-JP';
+        speechSynthesis.speak(utterance);
+    }
+
+    // 倒计时
+    let remaining = interval / 1000;
+    timerEl.textContent = `倒计时：${remaining} 秒`;
+    const countdown = setInterval(() => {
+        remaining--;
+        timerEl.textContent = `倒计时：${remaining} 秒`;
+        if (remaining <= 0) clearInterval(countdown);
+    }, 1000);
+
+    // 设定定时器：interval 毫秒后播放下一个
+    setTimeout(() => {
+        answers.push({
+            material_id: material.id,
+            user_input: inputEl.value.trim()
+        });
+        currentIndex++;
+        playNext();
+    }, interval);
+}
+
+function finishPractice() {
+    // 把答案保存到 localStorage 或通过 Ajax 提交到后端（这里先简单 alert）
+    console.log("用户答案：", answers);
+    localStorage.setItem('practice_answers', JSON.stringify(answers));
+
+    // 跳转到验收页面（稍后我们来实现）
+    window.location.href = "{% url 'review_page' %}";
+}
+
+playNext();
+</script>

@@ -1,0 +1,7 @@
+<h2>📝 用户注册</h2>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">注册</button>
+</form>
+<p>已有账号？<a href="{% url 'login' %}">前往登录</a></p>

@@ -1,0 +1,39 @@
+<h1>📘 练习历史</h1>
+
+<form method="get">
+    分类：
+    <select name="category">
+        <option value="">全部</option>
+        {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if cat.id|stringformat:"s" == selected_category %}selected{% endif %}>
+                {{ cat.name }}
+            </option>
+        {% endfor %}
+    </select>
+    日期：
+    <input type="date" name="start_date" value="{{ start_date }}">
+    -
+    <input type="date" name="end_date" value="{{ end_date }}">
+    <button type="submit">筛选</button>
+</form>
+
+<table border="1" cellpadding="5">
+    <tr>
+        <th>时间</th>
+        <th>模式</th>
+        <th>总数</th>
+        <th>正确</th>
+        <th>错误</th>
+    </tr>
+    {% for session in page_obj %}
+    {% with records=session.answerrecord_set.all %}
+    <tr>
+        <td>{{ session.created_at|date:"Y-m-d H:i" }}</td>
+        <td>{{ session.get_mode_display }}</td>
+        <td>{{ records.count }}</td>
+        <td>{{ records|dictsortreversed:"is_correct"|length }}</td>
+        <td>{{ records|reject:"is_correct"|length }}</td>
+    </tr>
+    {% endwith %}
+    {% endfor %}
+</table>

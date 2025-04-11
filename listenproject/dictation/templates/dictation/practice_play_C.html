@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>口说回答模式</title>
+</head>
+<body onload="checkMicrophoneAvailability()">
+<h1>🎤 口说回答模式</h1>
+<a href="{% url 'practice_setting' %}?checkmic=1">🎤 麦克风检测与口述练习</a>
+<p id="timer" style="font-weight: bold; color: green;"></p>
+
+<div id="question-area">
+    <p><strong id="question-text">准备中...</strong></p>
+    <audio id="question-audio" controls style="display: none;"></audio>
+</div>
+
+<div id="recording-area" style="margin-top: 20px;">
+    <button id="record-btn" onclick="startRecording()">🎧 开始录音</button>
+    <button id="stop-btn" onclick="stopRecording()" disabled>⏹ 停止录音</button>
+    <button onclick="startTranscription()">🎙️ 转文字</button>
+    <p id="transcript"></p>
+
+</div>
+
+<div id="audio-preview-area" style="margin-top: 20px;"></div>
+<audio id="question-audio" controls style="display:none;"></audio>
+
+<script>
+    const materials = {{ materials|safe }};
+    shuffle(materials);
+    
+    let currentIndex = 0;
+    let answers = [];
+    
+    const questionTextEl = document.getElementById('question-text');
+    const questionAudioEl = document.getElementById('question-audio');
+    const timerEl = document.getElementById('timer');
+    const recordBtn = document.getElementById('record-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const previewArea = document.getElementById('audio-preview-area');
+    
+    let mediaRecorder;
+    let audioChunks = [];
+    
+    function checkMicrophoneAvailability() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("❌ 此浏览器不支持录音，请更换环境");
+            return;
+        }
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => stream.getTracks().forEach(track => track.stop()))
+            .catch(err => alert("请允许浏览器使用麦克风"));
+    }
+    
+    async function startRecording() {
+        audioChunks = [];
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.start();
+    
+        recordBtn.disabled = true;
+        stopBtn.disabled = false;
+    
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    
+        mediaRecorder.onstop = async () => {
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const base64 = await blobToBase64(blob);
+    
+            const material = materials[currentIndex - 1];
+            const materialId = material.id;
+    
+            const recognizedText = await transcribeBlob(blob);
+    
+            answers.push({
+                material_id: materialId,
+                audio_data: base64,
+                user_input: recognizedText
+            });
+    
+            // 发送后端保存
+            fetch("{% url 'api_save_answer' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    material_id: materialId,
+                    recognized_text: recognizedText,
+                    base64audio: base64,
+                    auto_judge: true
+                })
+            });
+    
+            createPreview(blob, materialId, recognizedText);
+        };
+    }
+    
+    function stopRecording() {
+        mediaRecorder.stop();
+        recordBtn.disabled = false;
+        stopBtn.disabled = true;
+    }
+    
+    function playNext() {
+        if (currentIndex >= materials.length) {
+            if (confirm("听写完成，确定提交吗？点击取消重听一次。")) {
+                localStorage.setItem('practice_answers', JSON.stringify(answers));
+                window.location.href = "{% url 'review_page' %}";
+            } else {
+                currentIndex = 0;
+                answers = [];
+                previewArea.innerHTML = '';
+                shuffle(materials);
+                playNext();
+            }
+            return;
+        }
+    
+        const material = materials[currentIndex];
+        const question = material.questions[0];
+    
+        let audioDuration = 3;
+    
+        if (question && question.question_audio) {
+            questionAudioEl.src = question.question_audio;
+            questionAudioEl.onloadedmetadata = function() {
+                audioDuration = questionAudioEl.duration;
+                questionAudioEl.play();
+                setTimeout(playNext, audioDuration * 2000);
+            };
+        } else if (question) {
+            questionTextEl.textContent = question.question_text;
+            const utterance = new SpeechSynthesisUtterance(question.question_text);
+            utterance.lang = 'ja-JP';
+            speechSynthesis.speak(utterance);
+            audioDuration = Math.max(question.question_text.length * 0.2, 3);
+            setTimeout(playNext, audioDuration * 2000);
+        } else {
+            questionTextEl.textContent = "(无题目)";
+            setTimeout(playNext, audioDuration * 2000);
+        }
+    
+        currentIndex++;
+    }
+    
+    function shuffle(array) {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex !== 0) {
+            randomIndex = Math.floor(Math.random() * currentIndex);
+            currentIndex--;
+            [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+    }
+    
+    function blobToBase64(blob) {
+        return new Promise(res => {
+            const reader = new FileReader();
+            reader.onload = () => res(reader.result);
+            reader.readAsDataURL(blob);
+        });
+    }
+    
+    function createPreview(blob, id, text) {
+        const div = document.createElement('div');
+        const audio = document.createElement('audio');
+        audio.controls = true;
+        audio.src = URL.createObjectURL(blob);
+        const p = document.createElement('p');
+        p.textContent = `识别：${text}`;
+        div.append(audio, p);
+        previewArea.appendChild(div);
+    }
+    
+    async function transcribeBlob(blob) {
+        return new Promise(resolve => {
+            if (!window.webkitSpeechRecognition) {
+                resolve('');
+                return;
+            }
+            const rec = new webkitSpeechRecognition();
+            rec.lang = 'ja-JP';
+            rec.onresult = e => resolve(e.results[0][0].transcript);
+            rec.onerror = () => resolve('');
+            rec.start();
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie) {
+            const cookies = document.cookie.split(';');
+            for (const c of cookies) {
+                const cookie = c.trim();
+                if (cookie.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    checkMicrophoneAvailability();
+    playNext();
+    </script>    
+<script>
+    function checkMic() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            alert("❌ 当前浏览器不支持麦克风功能，请使用 Chrome 或 Edge 等现代浏览器。");
+            return;
+        }
+    
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                alert("✅ 麦克风可用，可以开始录音练习！");
+                stream.getTracks().forEach(track => track.stop());
+            })
+            .catch(error => {
+                alert("⚠️ 麦克风不可用，请检查浏览器设置并授权！");
+                console.warn("麦克风检测失败：", error);
+            });
+    }
+    
+    // ✅ 页面加载时检查 URL 参数，自动检测麦克风
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("checkmic") === "1") {
+        checkMic();
+    }
+    </script>
+</body>
+</html>
